@@ -7,12 +7,10 @@
 #
 ##===----------------------------------------------------------------------===##
 
-LEVEL = ..
+all:;
 
-PARALLEL_DIRS = ADT Analysis Bitcode CodeGen DebugInfo ExecutionEngine IR \
-		Object Option Support Transforms
 
-include $(LEVEL)/Makefile.common
+clean:;
 
-clean::
-	$(Verb) $(RM) -f *Tests
+
+install:;

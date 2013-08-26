@@ -23,6 +23,9 @@ endif
 # the wider LLVM infrastructure (including Clang).
 OPTIONAL_PARALLEL_DIRS += lld
 OPTIONAL_DIRS := lldb
+ifeq ($(NOCLING),)
+OPTIONAL_DIRS += cling
+endif
 
 # NOTE: The tools are organized into five groups of four consisting of one
 # large and three small executables. This is done to minimize memory load

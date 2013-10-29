@@ -76,6 +76,7 @@ namespace {
   struct NoRAUWValueMapConfig : public ValueMapConfig<ValueTy> {
     typedef JITResolverState *ExtraData;
     static void onRAUW(JITResolverState *, Value *Old, Value *New) {
+      return; // Disable temporarily for testing purposes.
       llvm_unreachable("The JIT doesn't know how to handle a"
                        " RAUW on a value it has emitted.");
     }
@@ -1208,6 +1209,7 @@ void JITEmitter::EmittedFunctionConfig::onDelete(
 }
 void JITEmitter::EmittedFunctionConfig::onRAUW(
   JITEmitter *, const Function*, const Function*) {
+  return; // Disable temporarily for testing purposes.
   llvm_unreachable("The JIT doesn't know how to handle a"
                    " RAUW on a value it has emitted.");
 }

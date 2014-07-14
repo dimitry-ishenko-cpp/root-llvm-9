@@ -615,7 +615,7 @@ void *JIT::getOrEmitGlobalVariable(const GlobalVariable *GV) {
     }
     addGlobalMapping(GV, Ptr);
   } else {
-    if (GV->hasWeakLinkage()) {
+    if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage()) {
       Ptr = sys::DynamicLibrary::SearchForAddressOfSymbol(GV->getName());
       if (Ptr) return Ptr;
     }

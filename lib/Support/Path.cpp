@@ -904,24 +904,6 @@ void directory_entry::replace_filename(const Twine &filename, file_status st) {
   Status = st;
 }
 
-error_code has_magic(const Twine &path, const Twine &magic, bool &result) {
-  SmallString<512>  MagicStorage;
-  StringRef Magic = magic.toStringRef(MagicStorage);
-  SmallString<512> Buffer;
-
-  if (error_code ec = get_magic(path, Magic.size(), Buffer)) {
-    if (ec == errc::value_too_large) {
-      // Magic.size() > file_size(Path).
-      result = false;
-      return error_code();
-    }
-    return ec;
-  }
-
-  result = Magic == Buffer;
-  return error_code();
-}
-
 /// @brief Identify the magic in magic.
 file_magic identify_magic(StringRef Magic) {
   if (Magic.size() < 4)
@@ -1071,11 +1053,15 @@ file_magic identify_magic(StringRef Magic) {
   return file_magic::unknown;
 }
 
-error_code identify_magic(const Twine &path, file_magic &result) {
-  SmallString<512> Magic;
-  error_code ec = get_magic(path, Magic.capacity(), Magic);
-  if (ec && ec != errc::value_too_large)
-    return ec;
+std::error_code identify_magic(const Twine &Path, file_magic &Result) {
+  int FD;
+  if (std::error_code EC = openFileForRead(Path, FD))
+    return EC;
+
+  char Buffer[32];
+  int Length = read(FD, Buffer, sizeof(Buffer));
+  if (close(FD) != 0 || Length < 0)
+    return std::error_code(errno, std::generic_category());
 
   Result = identify_magic(StringRef(Buffer, Length));
   return std::error_code();

@@ -110,6 +110,14 @@ public:
     return 0;
   }
 
+  /// This method returns the address of the specified function or variable
+  /// that could not be resolved by getSymbolAddress() or by resolving
+  /// possible weak symbols by the ExecutionEngine.
+  /// It is used to resolve symbols during module linking.
+  virtual uint64_t getMissingSymbolAddress(const std::string &Name) {
+    return 0;
+  }
+
   /// This method returns the address of the specified function. As such it is
   /// only useful for resolving library symbols, not code generated symbols.
   ///

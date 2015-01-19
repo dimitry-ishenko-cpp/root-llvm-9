@@ -794,7 +794,9 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
         }
       }
 
-      // FIXME: Implement error handling that doesn't kill the host program!
+      if (!Addr)
+        Addr = MemMgr->getMissingSymbolAddress(Name);
+
       if (!Addr)
         report_fatal_error("Program used external function '" + Name +
                            "' which could not be resolved!");

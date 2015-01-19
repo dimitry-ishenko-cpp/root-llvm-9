@@ -35,6 +35,10 @@ public:
   uint64_t getSymbolAddress(const std::string &Name) override;
 
   // Functions deferred to client memory manager
+  uint64_t getMissingSymbolAddress(const std::string &Name) override {
+    return ClientMM->getMissingSymbolAddress(Name);
+  }
+
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID,
                                StringRef SectionName) override {

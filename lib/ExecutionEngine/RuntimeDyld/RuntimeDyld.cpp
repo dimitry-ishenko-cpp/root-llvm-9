@@ -168,9 +168,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     uint32_t Flags = I->getFlags();
 
     bool IsCommon = Flags & SymbolRef::SF_Common;
-    if (IsCommon)
+    bool IsWeak = Flags & SymbolRef::SF_Weak;
+    if (IsCommon) {
       CommonSymbols.push_back(*I);
-    else {
+    } else {
       object::SymbolRef::Type SymType;
       Check(I->getType(SymType));
 
@@ -188,6 +189,11 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
           continue;
         StringRef SectionData;
         Check(SI->getContents(SectionData));
+        // TODO: It make make sense to delay emitting the section for weak
+        // symbols until they are actually required, but that's not possible
+        // currently, because we only know whether we will need the symbol
+        // in resolveRelocations, which happens after we have already finalized
+        // the Load.
         bool IsCode = SI->isText();
         unsigned SectionID =
             findOrEmitSection(Obj, *SI, IsCode, LocalSections);
@@ -198,7 +204,12 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
         SymbolInfo::Visibility Vis =
           (Flags & SymbolRef::SF_Exported) ?
             SymbolInfo::Default : SymbolInfo::Hidden;
-        GlobalSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
+        if (!IsWeak)
+        {
+          GlobalSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
+        } else {
+           WeakSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
+        }
       }
     }
   }
@@ -768,6 +779,21 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
                SymInfo.getOffset();
       }
 
+      // If we didn't find the symbol yet, and it is present in the weak symbol
+      // table, the definition from this object file needs to be used, so emit
+      // it now
+      if (!Addr) {
+        SymbolTableMap::const_iterator Loc = WeakSymbolTable.find(Name);
+        if (Loc != WeakSymbolTable.end()) {
+          SymbolLoc SymLoc = Loc->second;
+          Addr = getSectionLoadAddress(SymLoc.first) + SymLoc.second;
+          // Since the weak symbol is now, materialized, add it to the
+          // GlobalSymbolTable. If somebody later asks the ExecutionEngine
+          // for the address of this symbol that's where it'll look
+          GlobalSymbolTable[Name] = SymLoc;
+        }
+      }
+
       // FIXME: Implement error handling that doesn't kill the host program!
       if (!Addr)
         report_fatal_error("Program used external function '" + Name +
@@ -784,6 +810,7 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
 
     ExternalSymbolRelocations.erase(i);
   }
+  WeakSymbolTable.clear();
 }
 
 //===----------------------------------------------------------------------===//

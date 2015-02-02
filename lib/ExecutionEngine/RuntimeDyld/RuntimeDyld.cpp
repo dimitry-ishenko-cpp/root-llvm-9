@@ -208,7 +208,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
         {
           GlobalSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
         } else {
-           WeakSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
+          WeakSymbolTable[Name] = SymbolInfo(SectionID, SectOffset, Vis);
         }
       }
     }
@@ -783,14 +783,15 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
       // table, the definition from this object file needs to be used, so emit
       // it now
       if (!Addr) {
-        SymbolTableMap::const_iterator Loc = WeakSymbolTable.find(Name);
+        RTDyldSymbolTable::const_iterator Loc = WeakSymbolTable.find(Name);
         if (Loc != WeakSymbolTable.end()) {
-          SymbolLoc SymLoc = Loc->second;
-          Addr = getSectionLoadAddress(SymLoc.first) + SymLoc.second;
+          const SymbolInfo& SymInfo = Loc->second;
+          Addr = getSectionLoadAddress(SymInfo.getSectionID());
+          Addr += SymInfo.getOffset();
           // Since the weak symbol is now, materialized, add it to the
           // GlobalSymbolTable. If somebody later asks the ExecutionEngine
           // for the address of this symbol that's where it'll look
-          GlobalSymbolTable[Name] = SymLoc;
+          GlobalSymbolTable[Name] = SymInfo;
         }
       }
 

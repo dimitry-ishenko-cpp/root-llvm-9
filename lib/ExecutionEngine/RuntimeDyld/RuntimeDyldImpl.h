@@ -204,7 +204,7 @@ protected:
   RTDyldSymbolTable GlobalSymbolTable;
 
   // Like the global symbol table but for weak symbols
-  SymbolTableMap WeakSymbolTable;
+  RTDyldSymbolTable WeakSymbolTable;
 
   // Pair representing the size and alignment requirement for a common symbol.
   typedef std::pair<unsigned, unsigned> CommonSymbolInfo;

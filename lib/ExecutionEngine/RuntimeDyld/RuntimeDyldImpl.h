@@ -374,6 +374,17 @@ protected:
   // \brief Implementation of the generic part of the loadObject algorithm.
   std::pair<unsigned, unsigned> loadObjectImpl(const object::ObjectFile &Obj);
 
+  const SymbolInfo* getGlobalOrWeakNamed(StringRef Name) {
+    RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
+    if (pos == GlobalSymbolTable.end()) {
+      pos = WeakSymbolTable.find(Name);
+      if (pos == WeakSymbolTable.end())
+        return nullptr;
+      GlobalSymbolTable[Name] = pos->second;
+    }
+    return &pos->second;
+  }
+
 public:
   RuntimeDyldImpl(RTDyldMemoryManager *mm)
     : MemMgr(mm), Checker(nullptr), ProcessAllSections(false), HasError(false) {
@@ -392,34 +403,32 @@ public:
   virtual std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
   loadObject(const object::ObjectFile &Obj) = 0;
 
-  uint8_t* getSymbolAddress(StringRef Name) const {
+  uint8_t* getSymbolAddress(StringRef Name) {
     // FIXME: Just look up as a function for now. Overly simple of course.
     // Work in progress.
-    RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
-    if (pos == GlobalSymbolTable.end())
-      return nullptr;
-    const auto &SymInfo = pos->second;
-    return getSectionAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
+    if (auto SymInfo = getGlobalOrWeakNamed(Name))
+      return getSectionAddress(SymInfo->getSectionID())
+        + SymInfo->getOffset();
+    return nullptr;
   }
 
-  uint64_t getSymbolLoadAddress(StringRef Name) const {
+  uint64_t getSymbolLoadAddress(StringRef Name) {
     // FIXME: Just look up as a function for now. Overly simple of course.
     // Work in progress.
-    RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
-    if (pos == GlobalSymbolTable.end())
-      return 0;
-    const auto &SymInfo = pos->second;
-    return getSectionLoadAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
+    if (auto SymInfo = getGlobalOrWeakNamed(Name))
+      return getSectionLoadAddress(SymInfo->getSectionID())
+        + SymInfo->getOffset();
+    return 0;
   }
 
-  uint64_t getExportedSymbolLoadAddress(StringRef Name) const {
-    RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
-    if (pos == GlobalSymbolTable.end())
-      return 0;
-    const auto &SymInfo = pos->second;
-    if (SymInfo.getVisibility() == SymbolInfo::Hidden)
-      return 0;
-    return getSectionLoadAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
+  uint64_t getExportedSymbolLoadAddress(StringRef Name) {
+    if (auto SymInfo = getGlobalOrWeakNamed(Name)) {
+      if (SymInfo->getVisibility() == SymbolInfo::Hidden)
+        return 0;
+      return getSectionLoadAddress(SymInfo->getSectionID())
+        + SymInfo->getOffset();
+    }
+    return 0;
   }
 
   void resolveRelocations();
